@@ -1,0 +1,49 @@
+version: 2
+
+sources:
+  - name: snowflake_source
+    schema: claim
+    description: Snowflake staging layer
+
+    tables:
+      - name: claims_data
+        description: Stores healthcare claims data
+
+        columns:
+          - name: Claim_ID
+            description: A unique identifier for the claim
+            tests:
+              - unique
+              - not_null
+          - name: Provider_ID
+            description: A unique identifier for the provider
+          - name: Patient_ID
+            description: A unique identifier for the patient
+          - name: Date_of_Service
+            description: The date when the service was provided
+          - name: Billed_Amount
+            description: The total amount billed for the claim
+          - name: Procedure_Code
+            description: A medical procedure code associated with the claim
+          - name: Diagnosis_Code
+            description: A diagnosis code associated with the claim
+          - name: Allowed_Amount
+            description: The maximum amount allowed for reimbursement
+          - name: Paid_Amount
+            description: The amount paid for the claim
+          - name: Insurance_Type
+            description: The type of insurance covering the claim (e.g., Medicare, Self-Pay)
+          - name: Claim_Status
+            description: The current status of the claim (e.g., Paid, Denied, Under Review)
+          - name: Reason_Code
+            description: The reason for the claim decision (if applicable)
+          - name: Follow_up_Required
+            description: Indicates whether further action is required (Yes/No)
+          - name: AR_Status
+            description: The accounts receivable status of the claim
+          - name: Outcome
+            description: The final outcome of the claim processing
+
+models:
+  - name: claims
+    description: Processed and transformed claims data model
