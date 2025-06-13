@@ -39,26 +39,48 @@ This project presents a complete **healthcare claims analytics pipeline**, from 
 **In Snowflake:**
 
 ```sql
--- Create stage
-CREATE OR REPLACE STAGE s3_stage
-URL='s3://claims-data-bucket'
-STORAGE_INTEGRATION = your_aws_integration;
+create warehouse DWH_WH;
+create database DBT_DB
+create schema DBT_DB.CLAIM
 
--- Create table
-CREATE OR REPLACE TABLE raw_claims (
-    claim_id STRING, provider_id BIGINT, patient_id BIGINT,
-    date_of_service STRING, billed_amount FLOAT,
-    procedure_code STRING, diagnosis_code STRING,
-    allowed_amount FLOAT, paid_amount FLOAT,
-    insurance_type STRING, claim_status STRING,
-    reason_code STRING, follow_up_required STRING,
-    ar_status STRING, outcome STRING
+create or replace storage integration Claim_OBJ
+ type = external_stage
+ storage_provider = s3
+  enabled = true
+  storage_aws_role_arn = 'arn:aws:iam::565393055875:role/claims-data-role'
+ storage_allowed_locations = ('s3://healthplan-claims-project/');
+
+ desc integration Claim_OBJ;
+
+ create or replace file format csv_format type = csv field_delimiter = ',' skip_header = 1 null_if = ('NULL', 'null') empty_field_as_null = true;
+
+ create or replace stage claim_stage
+ storage_integration = Claim_OBJ
+ url = 's3://healthplan-claims-project/'
+ file_format = csv_format;
+
+ CREATE OR REPLACE TABLE claims_data (
+    CLAIM_ID VARCHAR(20),
+    PROVIDER_ID BIGINT,
+    PATIENT_ID BIGINT,
+    DATE_OF_SERVICE DATE,
+    BILLED_AMOUNT DECIMAL(10,2),
+    PROCEDURE_CODE INT,
+    DIAGNOSIS_CODE VARCHAR(10),
+    ALLOWED_AMOUNT DECIMAL(10,2),
+    PAID_AMOUNT DECIMAL(10,2),
+    INSURANCE_TYPE VARCHAR(50),
+    CLAIM_STATUS VARCHAR(20),
+    REASON_CODE VARCHAR(100),
+    FOLLOW_UP_REQUIRED VARCHAR(5),
+    AR_STATUS VARCHAR(30),
+    OUTCOME VARCHAR(30)
 );
 
--- Load data
-COPY INTO raw_claims
-FROM @s3_stage/claims_data.csv
-FILE_FORMAT = (TYPE = CSV FIELD_OPTIONALLY_ENCLOSED_BY = '"' SKIP_HEADER = 1);
+copy into claims_data from @claim_stage
+ON_ERROR = 'skip_file';
+
+select top 10* from claims_data;
 ```
 
 ---
