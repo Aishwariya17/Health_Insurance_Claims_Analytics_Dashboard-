@@ -1,90 +1,166 @@
-# 🏥 Claims Data Analytics Pipeline
 
-This project demonstrates an end-to-end data analytics pipeline built using **AWS S3**, **Snowflake**, **DBT**, and **Streamlit** to process, analyze, and visualize healthcare claims data. The goal is to identify trends, denial patterns, and high-risk claims across providers and insurance types.
+# 🏥 Healthcare Claims Analytics Project (AWS S3 → Snowflake → DBT → Tableau)
 
-## 🔧 Technologies Used
-- **AWS S3** – For raw data storage
-- **Snowflake** – Data warehousing and query processing
-- **DBT** – Data transformation and modeling
-- **Streamlit** – Dashboarding and interactive visualizations
+This project presents a complete **healthcare claims analytics pipeline**, from raw data in **AWS S3**, transformation using **DBT** on **Snowflake**, and final visualization in **Tableau**.
 
-## 📈 Key Features
-- Ingested and processed 5,000+ claims records
-- DBT models to compute:
-  - Denial Rates by Reason & Provider
-  - Payment & Allowed Ratios
-  - High-Risk Claim Flags
-- Streamlit dashboard includes:
-  - KPI metrics (total claims, paid/denied claims)
-  - Line chart of monthly claim trends
-  - Pie chart for outcomes by insurance type
-  - Bar charts for high-risk claims & procedure analysis
-  - Filters for insurance type, year, and provider
+---
 
-## 📂 Project Structure
+## 📌 Pipeline Overview
+
 ```
-├── data/
-│   └── raw_claims.csv              # Uploaded to AWS S3
-├── dbt/
-│   ├── models/
-│   │   ├── incremental_claims.sql
-│   │   ├── denial_rate.sql
-│   │   ├── provider_denial_rate.sql
-│   │   ├── high_risk_claims.sql
-│   │   └── agg_claims_summary.sql
-│   └── dbt_project.yml
-├── dashboard/
-│   └── streamlit_app.py            # Dashboard code
-├── README.md
-└── requirements.txt
+[CSV Files] → [AWS S3] → [Snowflake External Stage & Table] → [DBT Transformations] → [Tableau Dashboard]
 ```
 
-## 🔄 Pipeline Flowchart
+---
+
+## 🧱 Tech Stack
+
+| Layer         | Tool         | Purpose                           |
+|---------------|--------------|-----------------------------------|
+| Storage       | AWS S3       | Raw claims CSV files              |
+| Warehouse     | Snowflake    | Centralized query & compute layer |
+| Transformation| DBT          | SQL-based data modeling           |
+| Visualization | Tableau      | Dashboard & insights              |
+
+---
+
+## 🛠️ Step-by-Step Setup
+
+### ✅ 1. Upload Data to AWS S3
+
+- Go to AWS S3 Console
+- Create a bucket: `claims-data-bucket`
+- Upload your file: `claims_data.csv`
+
+---
+
+### ✅ 2. Connect Snowflake to S3
+
+**In Snowflake:**
+
+```sql
+-- Create stage
+CREATE OR REPLACE STAGE s3_stage
+URL='s3://claims-data-bucket'
+STORAGE_INTEGRATION = your_aws_integration;
+
+-- Create table
+CREATE OR REPLACE TABLE raw_claims (
+    claim_id STRING, provider_id BIGINT, patient_id BIGINT,
+    date_of_service STRING, billed_amount FLOAT,
+    procedure_code STRING, diagnosis_code STRING,
+    allowed_amount FLOAT, paid_amount FLOAT,
+    insurance_type STRING, claim_status STRING,
+    reason_code STRING, follow_up_required STRING,
+    ar_status STRING, outcome STRING
+);
+
+-- Load data
+COPY INTO raw_claims
+FROM @s3_stage/claims_data.csv
+FILE_FORMAT = (TYPE = CSV FIELD_OPTIONALLY_ENCLOSED_BY = '"' SKIP_HEADER = 1);
 ```
-        +-----------+
-        | Raw Data  |
-        | (CSV/S3)  |
-        +-----+-----+
-              |
-              v
-     +--------+--------+
-     | Snowflake Stage |
-     +--------+--------+
-              |
-              v
-      +-------+--------+
-      |  DBT Transform |
-      |  (SQL Models)  |
-      +-------+--------+
-              |
-              v
-   +----------+----------+
-   | Streamlit Dashboard |
-   +---------------------+
+
+---
+
+### ✅ 3. Setup DBT Project
+
+#### 🧩 Project Structure
+
+```
+models/
+├── staging/
+│   └── stg_claims.sql
+├── marts/
+│   ├── agg_claims_kpis.sql
+│   ├── monthly_claims_trend.sql
+│   ├── denial_rate.sql
+│   ├── insurance_outcome_distribution.sql
+│   └── high_risk_claims.sql
 ```
 
-## 🚀 How to Run
-
-### 1. Upload data to AWS S3:
-Upload your CSV to your S3 bucket.
-
-### 2. Set up Snowflake and DBT:
+#### 🧬 DBT Commands (CMD Prompt)
 ```bash
-cd dbt/
+# Create virtual env
+python -m venv dbt-venv
+dbt-venv\Scripts\activate
+
+# Install packages
+pip install dbt-core dbt-snowflake
+
+# Initialize project
+dbt init snowflake
+
+# Run models
+cd snowflake
+dbt debug
 dbt run
+dbt test
+dbt docs generate
+dbt docs serve
 ```
 
-### 3. Run the Streamlit app:
+---
+
+### ✅ 4. Connect Tableau to Snowflake
+
+1. Open Tableau Desktop
+2. Click **Connect > Snowflake**
+3. Enter:
+   - Server: `MHGAFHR-DG43637.snowflakecomputing.com`
+   - Warehouse: `DWH_WH`
+   - Database: `DBT_DB`
+   - Schema: `CLAIM`
+   - Role: `ACCOUNTADMIN`
+   - User: `Aishwariya170998`
+4. Drag and drop DBT models like `agg_claims_kpis`, `monthly_claims_trend`, etc.
+
+---
+
+### ✅ 5. Dashboard Design (Suggested Layout)
+
+| Row            | Content                            |
+|----------------|-------------------------------------|
+| KPI Row        | Total Claims, Paid Amount           |
+| Chart Row 1    | Monthly Trend, Paid vs Denied       |
+| Chart Row 2    | Claim Status by Insurance, Denial Reasons |
+| Chart Row 3    | Follow-up by Reason Code, High-Risk Claims |
+
+Use color palette:
+- `#A66EFF` for Denied
+- `#4DD0E1` for Paid
+- Background: `#121212`
+
+---
+
+## 📷 Dashboard Preview
+
+[🔗 View Tableau Dashboard](https://public.tableau.com/app/profile/aishwariya.alagesan/viz/ClaimsAnalytics_17497746800490/HealthcareClaimsAnalyticsDashboard)
+
+![tableau](https://github.com/user-attachments/assets/912c9b13-6e98-4420-bba1-d2c05822a06d)
+
+---
+
+## 🗃️ Git Workflow (CMD Prompt)
+
 ```bash
-cd dashboard/
-streamlit run streamlit_app.py
+# Git Init
+git init
+git add .
+git commit -m "Initial commit with DBT + Tableau project"
+
+# Add Remote and Push
+git remote add origin https://github.com/yourusername/healthcare-claims-dashboard.git
+git branch -M main
+git push -u origin main
 ```
 
-## 📊 Dashboard Preview
-> Interactive filters for claim status, insurance, and provider  
-> KPIs + Line charts + Pie charts + High-risk claim visualizations
+---
 
-## 📌 Future Enhancements
-- Add anomaly detection on high-risk claims
-- Integrate Airflow for orchestration
-- Schedule dashboard refresh with caching
+## 👤 Author
+
+**Aishwariya A**  
+🔗 [LinkedIn](https://www.linkedin.com/in/aishwariya-alagesan)
+
+
+
